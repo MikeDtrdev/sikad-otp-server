@@ -48,18 +48,23 @@ const twilioClient = twilio(
 // Normalize phone number to E.164 format
 function normalizePhone(phone) {
   if (!phone) return '';
-  // Remove all non-digit characters except +
+  
+  // Remove all spaces and non-digit characters except +
   let cleaned = phone.replace(/[^\d+]/g, '');
+  
+  console.log(`Normalizing phone: "${phone}" -> cleaned: "${cleaned}"`);
   
   // Handle different formats
   if (cleaned.startsWith('+')) {
     return cleaned; // Already E.164
-  } else if (cleaned.startsWith('63')) {
-    return '+' + cleaned; // Add + to 63...
-  } else if (cleaned.startsWith('0')) {
-    return '+63' + cleaned.substring(1); // Replace 0 with +63
+  } else if (cleaned.startsWith('63') && cleaned.length >= 12) {
+    return '+' + cleaned; // Add + to 63... (e.g., 639933671339 -> +639933671339)
+  } else if (cleaned.startsWith('0') && cleaned.length === 11) {
+    return '+63' + cleaned.substring(1); // Replace 0 with +63 (e.g., 09933671339 -> +639933671339)
+  } else if (cleaned.length === 10) {
+    return '+63' + cleaned; // Default to Philippines (e.g., 9933671339 -> +639933671339)
   } else {
-    return '+63' + cleaned; // Default to Philippines
+    return '+63' + cleaned; // Fallback
   }
 }
 
@@ -103,11 +108,33 @@ app.post('/otp/check', async (req, res) => {
     }
 
     // Mark user as verified by phone number reference
+    // Try multiple phone formats to find the user
     const usersRef = db.collection('users');
-    const snapshot = await usersRef.where('phone', '==', normalizedPhone).limit(1).get();
+    let snapshot = await usersRef.where('phone', '==', normalizedPhone).limit(1).get();
+    
+    // If not found, try other common formats
+    if (snapshot.empty) {
+      // Try with 0 prefix (e.g., 09933671339)
+      const phoneWithZero = '0' + normalizedPhone.substring(3);
+      snapshot = await usersRef.where('phone', '==', phoneWithZero).limit(1).get();
+    }
+    
+    if (snapshot.empty) {
+      // Try without +63 prefix (e.g., 9933671339)
+      const phoneWithoutPrefix = normalizedPhone.substring(3);
+      snapshot = await usersRef.where('phone', '==', phoneWithoutPrefix).limit(1).get();
+    }
+    
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
-      await doc.ref.update({ phoneVerified: true, phoneVerifiedAt: admin.firestore.FieldValue.serverTimestamp() });
+      await doc.ref.update({ 
+        phoneVerified: true, 
+        phoneVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        phone: normalizedPhone // Update to E.164 format
+      });
+      console.log(`Updated user ${doc.id} with phoneVerified=true and normalized phone: ${normalizedPhone}`);
+    } else {
+      console.log(`No user found with phone: ${normalizedPhone}`);
     }
     return res.json({ ok: true });
   } catch (e) {
