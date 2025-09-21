@@ -45,6 +45,24 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+// Normalize phone number to E.164 format
+function normalizePhone(phone) {
+  if (!phone) return '';
+  // Remove all non-digit characters except +
+  let cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // Handle different formats
+  if (cleaned.startsWith('+')) {
+    return cleaned; // Already E.164
+  } else if (cleaned.startsWith('63')) {
+    return '+' + cleaned; // Add + to 63...
+  } else if (cleaned.startsWith('0')) {
+    return '+63' + cleaned.substring(1); // Replace 0 with +63
+  } else {
+    return '+63' + cleaned; // Default to Philippines
+  }
+}
+
 const PhoneSchema = z.object({ phone: z.string().min(7).max(20) });
 const CheckSchema = z.object({ phone: z.string(), code: z.string().min(4).max(10) });
 
@@ -54,9 +72,13 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.post('/otp/start', async (req, res) => {
   try {
     const { phone } = PhoneSchema.parse(req.body);
+    const normalizedPhone = normalizePhone(phone);
+    
+    console.log(`Original phone: ${phone}, Normalized: ${normalizedPhone}`);
+    
     const v = await twilioClient.verify.v2
       .services(process.env.TWILIO_VERIFY_SERVICE_SID)
-      .verifications.create({ to: phone, channel: 'sms' });
+      .verifications.create({ to: normalizedPhone, channel: 'sms' });
     return res.json({ status: v.status });
   } catch (e) {
     console.error('OTP start error', e);
@@ -68,9 +90,13 @@ app.post('/otp/start', async (req, res) => {
 app.post('/otp/check', async (req, res) => {
   try {
     const { phone, code } = CheckSchema.parse(req.body);
+    const normalizedPhone = normalizePhone(phone);
+    
+    console.log(`Checking OTP for phone: ${normalizedPhone}, code: ${code}`);
+    
     const check = await twilioClient.verify.v2
       .services(process.env.TWILIO_VERIFY_SERVICE_SID)
-      .verificationChecks.create({ to: phone, code });
+      .verificationChecks.create({ to: normalizedPhone, code });
 
     if (check.status !== 'approved') {
       return res.status(401).json({ ok: false, status: check.status });
@@ -78,7 +104,7 @@ app.post('/otp/check', async (req, res) => {
 
     // Mark user as verified by phone number reference
     const usersRef = db.collection('users');
-    const snapshot = await usersRef.where('phone', '==', phone).limit(1).get();
+    const snapshot = await usersRef.where('phone', '==', normalizedPhone).limit(1).get();
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
       await doc.ref.update({ phoneVerified: true, phoneVerifiedAt: admin.firestore.FieldValue.serverTimestamp() });
