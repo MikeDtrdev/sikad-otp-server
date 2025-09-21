@@ -1,0 +1,96 @@
+import express from 'express';
+import cors from 'cors';
+import { z } from 'zod';
+import admin from 'firebase-admin';
+import twilio from 'twilio';
+
+// Environment variables required:
+// TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID
+// FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY (replace \n with \n newlines)
+
+const requiredEnv = [
+  'TWILIO_ACCOUNT_SID',
+  'TWILIO_AUTH_TOKEN',
+  'TWILIO_VERIFY_SERVICE_SID',
+  'FIREBASE_PROJECT_ID',
+  'FIREBASE_CLIENT_EMAIL',
+  'FIREBASE_PRIVATE_KEY'
+];
+
+for (const key of requiredEnv) {
+  if (!process.env[key]) {
+    console.error(`Missing env var ${key}`);
+  }
+}
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Firebase Admin init
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+    })
+  });
+}
+const db = admin.firestore();
+
+// Twilio client
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+const PhoneSchema = z.object({ phone: z.string().min(7).max(20) });
+const CheckSchema = z.object({ phone: z.string(), code: z.string().min(4).max(10) });
+
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Start verification
+app.post('/otp/start', async (req, res) => {
+  try {
+    const { phone } = PhoneSchema.parse(req.body);
+    const v = await twilioClient.verify.v2
+      .services(process.env.TWILIO_VERIFY_SERVICE_SID)
+      .verifications.create({ to: phone, channel: 'sms' });
+    return res.json({ status: v.status });
+  } catch (e) {
+    console.error('OTP start error', e);
+    return res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+// Check verification
+app.post('/otp/check', async (req, res) => {
+  try {
+    const { phone, code } = CheckSchema.parse(req.body);
+    const check = await twilioClient.verify.v2
+      .services(process.env.TWILIO_VERIFY_SERVICE_SID)
+      .verificationChecks.create({ to: phone, code });
+
+    if (check.status !== 'approved') {
+      return res.status(401).json({ ok: false, status: check.status });
+    }
+
+    // Mark user as verified by phone number reference
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('phone', '==', phone).limit(1).get();
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      await doc.ref.update({ phoneVerified: true, phoneVerifiedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('OTP check error', e);
+    return res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`OTP server listening on :${port}`));
+
+
