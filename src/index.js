@@ -103,7 +103,8 @@ async function sendSMS(phone, message) {
     return response.data;
   } catch (error) {
     console.error('iTextMo SMS Error:', error.message);
-    throw new Error(`Failed to send SMS via iTextMo: ${error.message}`);
+    console.error('iTextMo Full Error:', error.response?.data);
+    throw new Error(`Failed to send SMS via iTextMo: ${error.message} - Details: ${JSON.stringify(error.response?.data)}`);
   }
 }
 
