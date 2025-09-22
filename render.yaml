@@ -1,17 +1,14 @@
 services:
   - type: web
-    name: sikad-otp-server
+    name: sikad-itextmo-otp-server
     env: node
     plan: free
     buildCommand: npm ci
     startCommand: npm start
-    autoDeploy: true
     envVars:
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_VERIFY_SERVICE_SID
+      - key: NODE_ENV
+        value: production
+      - key: ITEXTMO_API_CODE
         sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
@@ -19,4 +16,3 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
-
