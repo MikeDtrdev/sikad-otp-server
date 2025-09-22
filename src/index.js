@@ -111,6 +111,21 @@ async function sendSMS(phone, message) {
 const PhoneSchema = z.object({ phone: z.string().min(7).max(20) });
 const CheckSchema = z.object({ phone: z.string(), code: z.string().min(4).max(10) });
 
+// Root endpoint
+app.get('/', (_req, res) => res.json({ 
+  message: '🚴‍♂️ Sikad iTextMo OTP Server is running!',
+  service: 'Sikad iTextMo OTP Server',
+  version: '1.0.0',
+  endpoints: {
+    health: '/health',
+    otpStart: '/otp/start',
+    otpCheck: '/otp/check',
+    geofenceAlert: '/sms/geofence-alert'
+  },
+  provider: 'iTextMo Philippines',
+  timestamp: new Date().toISOString()
+}));
+
 app.get('/health', (_req, res) => res.json({ 
   ok: true, 
   service: 'Sikad iTextMo OTP Server',
