@@ -10,6 +10,8 @@ import axios from 'axios';
 
 const requiredEnv = [
   'ITEXTMO_API_CODE',
+  'ITEXTMO_EMAIL',
+  'ITEXTMO_PASSWORD',
   'FIREBASE_PROJECT_ID',
   'FIREBASE_CLIENT_EMAIL',
   'FIREBASE_PRIVATE_KEY'
@@ -38,8 +40,10 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // iTextMo Configuration
-const ITEXTMO_API_URL = 'https://www.itextmo.com/php_api/api.php';
+const ITEXTMO_API_URL = 'https://api.itexmo.com/api/broadcast';
 const ITEXTMO_API_CODE = process.env.ITEXTMO_API_CODE;
+const ITEXTMO_EMAIL = process.env.ITEXTMO_EMAIL;
+const ITEXTMO_PASSWORD = process.env.ITEXTMO_PASSWORD;
 
 // Normalize phone number to Philippine format for iTextMo
 function normalizePhone(phone) {
@@ -72,17 +76,34 @@ function generateOTP() {
 // Send SMS via iTextMo
 async function sendSMS(phone, message) {
   try {
-    const response = await axios.post(ITEXTMO_API_URL, {
-      '1': ITEXTMO_API_CODE,
-      '2': phone,
-      '3': message
+    const requestData = {
+      Email: ITEXTMO_EMAIL,
+      Password: ITEXTMO_PASSWORD,
+      ApiCode: ITEXTMO_API_CODE,
+      Recipients: [phone],
+      Message: message,
+      SenderId: 'ITEXMO SMS'
+    };
+    
+    console.log('Sending SMS to iTextMo:', { phone, message: message.substring(0, 50) + '...' });
+    
+    const response = await axios.post(ITEXTMO_API_URL, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
     });
     
     console.log('iTextMo Response:', response.data);
+    
+    if (response.data.Error) {
+      throw new Error(`iTextMo Error: ${response.data.Message}`);
+    }
+    
     return response.data;
   } catch (error) {
     console.error('iTextMo SMS Error:', error.message);
-    throw new Error('Failed to send SMS via iTextMo');
+    throw new Error(`Failed to send SMS via iTextMo: ${error.message}`);
   }
 }
 

@@ -10,6 +10,10 @@ services:
         value: production
       - key: ITEXTMO_API_CODE
         sync: false
+      - key: ITEXTMO_EMAIL
+        sync: false
+      - key: ITEXTMO_PASSWORD
+        sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_CLIENT_EMAIL

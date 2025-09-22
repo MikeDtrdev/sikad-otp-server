@@ -47,6 +47,8 @@ Create a `.env` file in the root directory:
 ```env
 # iTextMo Configuration
 ITEXTMO_API_CODE=your_itextmo_api_code_here
+ITEXTMO_EMAIL=your_itextmo_email_here
+ITEXTMO_PASSWORD=your_itextmo_password_here
 
 # Firebase Configuration
 FIREBASE_PROJECT_ID=your_firebase_project_id
