@@ -1,48 +1,43 @@
 // Test iTextMo credentials directly
-const axios = require('axios');
+import axios from 'axios';
 
 async function testCredentials() {
-  const credentials = {
-    Email: 'mikeddoctor08@gmail.com',
-    Password: '136717Mike',
-    ApiCode: 'PR-MIKED390417_P8IMG'
-  };
+  // Test with old password
+  const testCases = [
+    { email: 'mikeddoctor08@gmail.com', password: '12345Mike@' },
+    { email: 'MikeDtr', password: '12345Mike@' },
+  ];
 
-  console.log('Testing iTextMo credentials...');
-  console.log('Email:', credentials.Email);
-  console.log('Password:', credentials.Password);
-  console.log('ApiCode:', credentials.ApiCode);
-
-  try {
-    // Test with Query API first
-    const queryResponse = await axios.post('https://api.itexmo.com/api/query', credentials, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-
-    console.log('✅ Query API Response:', queryResponse.data);
-
-    // Test with Broadcast API
-    const broadcastData = {
-      ...credentials,
-      Recipients: ['09933671339'],
-      Message: 'Test message from Sikad OTP Server'
+  for (const testCase of testCases) {
+    console.log(`\n🔍 Testing: Email="${testCase.email}", Password="${testCase.password}"`);
+    
+    const credentials = {
+      Email: testCase.email,
+      Password: testCase.password,
+      ApiCode: 'PR-MIKED390417_P8IMG'
     };
 
-    const broadcastResponse = await axios.post('https://api.itexmo.com/api/broadcast', broadcastData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
+    try {
+      // Test with Query API first
+      const queryResponse = await axios.post('https://api.itexmo.com/api/query', credentials, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
 
-    console.log('✅ Broadcast API Response:', broadcastResponse.data);
+      console.log('✅ SUCCESS! Query API Response:', queryResponse.data);
+      console.log('🎉 CORRECT CREDENTIALS FOUND!');
+      console.log('Email:', testCase.email);
+      console.log('Password:', testCase.password);
+      return; // Stop testing if we find the correct credentials
 
-  } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    } catch (error) {
+      console.log('❌ Failed:', error.response?.data?.Message || error.message);
+    }
   }
+  
+  console.log('\n❌ None of the password variations worked. Please check your iTextMo dashboard for the correct password.');
 }
 
 testCredentials();

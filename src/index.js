@@ -43,7 +43,7 @@ const db = admin.firestore();
 const ITEXTMO_API_URL = 'https://api.itexmo.com/api/broadcast';
 const ITEXTMO_API_CODE = process.env.ITEXTMO_API_CODE;
 const ITEXTMO_EMAIL = process.env.ITEXTMO_EMAIL;
-const ITEXTMO_PASSWORD = process.env.ITEXTMO_PASSWORD;
+const ITEXTMO_PASSWORD = process.env.ITEXTMO_PASSWORD || '12345Mike@';
 
 // Normalize phone number to Philippine format for iTextMo
 function normalizePhone(phone) {
