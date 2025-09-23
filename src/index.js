@@ -54,15 +54,17 @@ function normalizePhone(phone) {
   
   console.log(`Normalizing phone: "${phone}" -> cleaned: "${cleaned}"`);
   
-  // Handle different Philippine formats
+  // Handle different Philippine formats - ALWAYS keep the 0 prefix for iTextMo
   if (cleaned.startsWith('+63')) {
-    return cleaned.substring(3); // Remove +63 for iTextMo (e.g., +639933671339 -> 9933671339)
+    return '0' + cleaned.substring(3); // Convert +639933671339 -> 09933671339
   } else if (cleaned.startsWith('63') && cleaned.length >= 12) {
-    return cleaned.substring(2); // Remove 63 prefix (e.g., 639933671339 -> 9933671339)
+    return '0' + cleaned.substring(2); // Convert 639933671339 -> 09933671339
   } else if (cleaned.startsWith('0') && cleaned.length === 11) {
-    return cleaned.substring(1); // Remove 0 prefix (e.g., 09933671339 -> 9933671339)
+    return cleaned; // Keep as is (e.g., 09933671339)
   } else if (cleaned.length === 10) {
-    return cleaned; // Already in correct format (e.g., 9933671339)
+    return '0' + cleaned; // Add 0 prefix (e.g., 9933671339 -> 09933671339)
+  } else if (cleaned.length === 11 && !cleaned.startsWith('0')) {
+    return '0' + cleaned; // Add 0 prefix if missing (e.g., 9933671339 -> 09933671339)
   } else {
     return cleaned; // Fallback
   }
