@@ -81,8 +81,8 @@ async function sendSMS(phone, message) {
       Password: ITEXTMO_PASSWORD,
       ApiCode: ITEXTMO_API_CODE,
       Recipients: [phone],
-      Message: message,
-      SenderId: 'ITEXMO SMS'
+      Message: message
+      // Removed SenderId to use default
     };
     
     console.log('Sending SMS to iTextMo:', { phone, message: message.substring(0, 50) + '...' });
