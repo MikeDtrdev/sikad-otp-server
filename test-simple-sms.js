@@ -4,7 +4,7 @@ import axios from 'axios';
 async function testSimpleSMS() {
   const credentials = {
     Email: 'mikeddoctor08@gmail.com',
-    Password: '136717Mike',
+    Password: '12345Mike@',
     ApiCode: 'PR-MIKED390417_P8IMG',
     Recipients: ['09933671339'],
     Message: 'Test SMS from Sikad OTP Server'
